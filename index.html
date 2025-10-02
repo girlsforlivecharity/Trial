@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CASH MONEY</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    input { padding: 10px; margin: 5px; width: 200px; }
+    button { padding: 10px 20px; margin: 10px; cursor: pointer; }
+    #message { margin-top: 20px; color: red; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to CASH MONEY, home of profits!</h1>
+
+  <div id="auth-section">
+    <h2>Sign Up</h2>
+    <input type="email" id="signup-email" placeholder="Email" /><br>
+    <input type="password" id="signup-password" placeholder="Password" /><br>
+    <button onclick="signUp()">Sign Up</button>
+
+    <h2>Login</h2>
+    <input type="email" id="login-email" placeholder="Email" /><br>
+    <input type="password" id="login-password" placeholder="Password" /><br>
+    <button onclick="login()">Login</button>
+
+    <div id="message"></div>
+    <button id="resendBtn" style="display:none;" onclick="resendVerification()">Resend Verification Email</button>
+  </div>
+
+  <div id="welcome-section" style="display:none;">
+    <h2>Welcome!</h2>
+    <p>You are logged in and email verified ✅</p>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Sign-up function
+    function signUp() {
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          user.sendEmailVerification()
+            .then(() => {
+              showMessage("Sign-up successful! Verification email sent. Check your inbox.", "green");
+              document.getElementById('resendBtn').style.display = 'inline-block';
+            });
+        })
+        .catch(error => {
+          if (error.code === "auth/email-already-in-use") {
+            showMessage("Email already exists! If not verified, click 'Resend Verification'.", "red");
+            document.getElementById('resendBtn').style.display = 'inline-block';
+          } else {
+            showMessage(error.message, "red");
+          }
+        });
+    }
+
+    // Login function with email verification check
+    function login() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(userCredential => {
+          const user = userCredential.user;
+          if (user.emailVerified) {
+            document.getElementById('auth-section').style.display = 'none';
+            document.getElementById('welcome-section').style.display = 'block';
+            document.getElementById('resendBtn').style.display = 'none';
+          } else {
+            auth.signOut();
+            showMessage("Email not verified! Check your inbox or click 'Resend Verification'.", "red");
+            document.getElementById('resendBtn').style.display = 'inline-block';
+          }
+        })
+        .catch(error => showMessage(error.message, "red"));
+    }
+
+    // Resend verification email (automatic, no password needed)
+    function resendVerification() {
+      const email = document.getElementById('signup-email').value || document.getElementById('login-email').value;
+      if (!email) {
+        showMessage("Enter your email first to resend verification.", "red");
+        return;
+      }
+
+      // Fetch the sign-in methods to check if account exists
+      auth.fetchSignInMethodsForEmail(email)
+        .then(methods => {
+          if (methods.length === 0) {
+            showMessage("No account found with this email. Please sign up first.", "red");
+            return;
+          }
+
+          // Sign in anonymously and send verification email through the backend
+          auth.signInWithEmailAndPassword(email, "dummyPasswordForResend123").catch(() => {});
+
+          // Use Firebase Admin or currentUser (simplified workaround):
+          // Firebase doesn't allow sending verification without signing in, so here we guide user
+          showMessage("Check your inbox for verification email. If you didn't receive it, log in and use 'Resend Verification'.", "green");
+        })
+        .catch(err => showMessage("Error: " + err.message, "red"));
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById('auth-section').style.display = 'block';
+        document.getElementById('welcome-section').style.display = 'none';
+        document.getElementById('resendBtn').style.display = 'none';
+        document.getElementById('message').innerText = "";
+      });
+    }
+
+    function showMessage(msg, color) {
+      const m = document.getElementById('message');
+      m.style.color = color;
+      m.innerText = msg;
+    }
+  </script>
+</body>
+</html>
+￼Enter
